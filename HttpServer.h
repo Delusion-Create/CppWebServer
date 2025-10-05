@@ -1,5 +1,5 @@
-#ifndef _REQUEST_H_
-#define _REQUEST_H_
+#ifndef _HTTPSERVER_H_
+#define _HTTPSERVER_H_
 
 #include <string>
 
@@ -15,6 +15,12 @@ public:
 private:
     int _fd;
     TcpServer* _server;
+    
+    // 处理HTTP请求
+    void handleHttpRequest(const std::string& requestData);
+    
+    // 发送HTTP响应
+    void sendHttpResponse(const std::string& responseData);
 };
 
 #endif

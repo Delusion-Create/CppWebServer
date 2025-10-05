@@ -5,7 +5,7 @@ CXX := g++
 TARGET := a.out
 
 # 列出所有需要编译的源文件
-SRCS := main.cpp ThreadPool.cpp TcpServer.cpp Logger.cpp epoll.cpp HttpServer.cpp # HttpRequest.cpp HttpResponse.cpp HttpServer.cpp HttpProcessor.cpp
+SRCS := main.cpp ThreadPool.cpp TcpServer.cpp Logger.cpp epoll.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp 
 
 # 将源文件名（如 main.cpp）转换为目标文件名（如 main.o）
 OBJS := $(SRCS:.cpp=.o)
