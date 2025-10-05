@@ -6,10 +6,10 @@
 // 前置声明，避免包含TcpServer.h
 class TcpServer;
 
-class Request {
+class HttpServer {
 public:
-    Request(int fd, TcpServer* server);
-    ~Request();
+    HttpServer(int fd, TcpServer* server);
+    ~HttpServer();
     void process();
     
 private:

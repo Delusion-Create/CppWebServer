@@ -1,4 +1,5 @@
 #include "TcpServer.h"
+#include "HttpServer.h" // 现在可以安全地包含
 #include "Logger.h"
 #include "epoll.h"
 #include <unistd.h>
@@ -6,6 +7,7 @@
 #include <sys/epoll.h>
 #include <cstring>
 #include <fcntl.h>
+#include <memory>
 
 using namespace std;
 
@@ -15,7 +17,7 @@ TcpServer* TcpServer::GetInstance(std::string ip, int port)
     return &instance;
 }
 
-TcpServer::TcpServer(std::string ip, int port) : _ip(ip), _port(port), _pool(3)
+TcpServer::TcpServer(std::string ip, int port) : _ip(ip), _port(port), _pool(5)
 {
     initialServer();
 }
@@ -76,7 +78,7 @@ void TcpServer::initialServer()
     // 将监听socket添加到epoll
     epoll_event ev;
     ev.data.fd = _sfd;
-    ev.events = EPOLLIN | EPOLLET; // 边缘触发模式
+    ev.events = EPOLLIN | EPOLLET;
     epoll_ctl(_epfd, EPOLL_CTL_ADD, _sfd, &ev);
     
     // 设置监听socket为非阻塞
@@ -104,7 +106,6 @@ void TcpServer::acceptConnection()
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                // 已经接受完所有连接
                 break;
             }
             else
@@ -114,19 +115,16 @@ void TcpServer::acceptConnection()
             }
         }
         
-        // 设置客户端socket为非阻塞
         setNonBlocking(cfd);
         
-        // 将客户端socket添加到epoll，监听读事件
         epoll_event ev;
         ev.data.fd = cfd;
-        ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP; // 边缘触发 + 监听连接关闭
+        ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
         epoll_ctl(_epfd, EPOLL_CTL_ADD, cfd, &ev);
         
-        // 为客户端连接创建锁
         {
             std::lock_guard<std::mutex> lock(_mapMutex);
-            _clientLocks[cfd]; // 插入一个空的mutex
+            _clientLocks[cfd];
         }
         
         LOG(INFO, "新连接建立成功, fd: " + to_string(cfd));
@@ -135,76 +133,28 @@ void TcpServer::acceptConnection()
 
 void TcpServer::handleEvent(int fd, uint32_t events)
 {
-    // 处理连接关闭事件
     if (events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
     {
         closeConnection(fd);
         return;
     }
     
-    // 处理可读事件
     if (events & EPOLLIN)
     {
-        // 将读取任务提交到线程池
-        _pool.addTask([this, fd]() {
-            // 获取该连接的锁，确保同一连接的处理是串行的
+        auto httpServer = std::make_shared<HttpServer>(fd, this);
+        
+        _pool.addTask([this, fd, httpServer]() {
             std::lock_guard<std::mutex> lock(_clientLocks[fd]);
-            
-            char buffer[1024];
-            while (true)
-            {
-                int recv_len = recv(fd, buffer, sizeof(buffer), 0);
-                if (recv_len == 0)
-                {
-                    // 客户端关闭连接
-                    closeConnection(fd);
-                    break;
-                }
-                else if (recv_len < 0)
-                {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    {
-                        // 数据已读取完毕
-                        break;
-                    }
-                    else
-                    {
-                        // 发生错误，关闭连接
-                        LOG(ERROR, "recv error on fd: " + to_string(fd));
-                        closeConnection(fd);
-                        break;
-                    }
-                }
-                else
-                {
-                    // 处理接收到的数据
-                    cout << "来自客户端 " << fd << " 的消息: " << buffer << endl;
-                    
-                    // 发送回复（简单回显）
-                    if (send(fd, buffer, recv_len, 0) < 0)
-                    {
-                        LOG(ERROR, "send error on fd: " + to_string(fd));
-                        closeConnection(fd);
-                        break;
-                    }
-                    
-                    // 清空缓冲区
-                    memset(buffer, 0, sizeof(buffer));
-                }
-            }
+            httpServer->process();
         });
     }
 }
 
 void TcpServer::closeConnection(int fd)
 {
-    // 从epoll中移除
     epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL);
-    
-    // 关闭socket
     close(fd);
     
-    // 从连接管理中移除
     {
         std::lock_guard<std::mutex> lock(_mapMutex);
         _clientLocks.erase(fd);
@@ -233,12 +183,10 @@ void TcpServer::run()
             
             if (fd == _sfd)
             {
-                // 监听socket有新连接
                 acceptConnection();
             }
             else
             {
-                // 客户端socket有事件
                 handleEvent(fd, revents);
             }
         }

@@ -1,4 +1,4 @@
-#include "Request.h"
+#include "HttpServer.h"
 #include "TcpServer.h" // 现在可以安全地包含
 #include "Logger.h"
 #include <iostream>
@@ -6,17 +6,17 @@
 #include <cstring>
 #include <sys/socket.h>
 
-Request::Request(int fd, TcpServer* server) : _fd(fd), _server(server) 
+HttpServer::HttpServer(int fd, TcpServer* server) : _fd(fd), _server(server) 
 {
-    LOG(INFO, "Request对象创建, fd: " + std::to_string(_fd));
+    LOG(INFO, "HttpServer对象创建, fd: " + std::to_string(_fd));
 }
 
-Request::~Request() 
+HttpServer::~HttpServer() 
 {
-    LOG(INFO, "Request对象销毁, fd: " + std::to_string(_fd));
+    LOG(INFO, "HttpServer对象销毁, fd: " + std::to_string(_fd));
 }
 
-void Request::process() 
+void HttpServer::process() 
 {
     char buffer[1024];
     while (true)
