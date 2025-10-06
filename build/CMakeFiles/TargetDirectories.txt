@@ -1,0 +1,3 @@
+/home/delusion/project/WebServer/C-WebServer/build/CMakeFiles/webserver.dir
+/home/delusion/project/WebServer/C-WebServer/build/CMakeFiles/edit_cache.dir
+/home/delusion/project/WebServer/C-WebServer/build/CMakeFiles/rebuild_cache.dir
