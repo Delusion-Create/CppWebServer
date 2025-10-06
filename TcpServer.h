@@ -2,6 +2,7 @@
 #define _TCPSERVER_H_
 
 #include "ThreadPool.h"
+#include "TcpTimer.h"
 #include <string>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
@@ -9,7 +10,7 @@
 #include <mutex>
 #include <memory>
 
-// 前置声明，避免包含HttpServer.h
+// 前置声明
 class HttpServer;
 
 class TcpServer
@@ -21,6 +22,7 @@ private:
     sockaddr_in _sin;
     int _epfd;
     ThreadPool _pool;
+    TcpTimer _timer; // 定时器管理器
     
     std::map<int, std::mutex> _clientLocks;
     std::mutex _mapMutex;
@@ -41,10 +43,9 @@ public:
     void acceptConnection();
     void handleEvent(int fd, uint32_t events);
     void closeConnection(int fd);
+    void setupTimer(int fd, int timeout); // 新增：为连接设置定时器
+    void removeTimer(int fd);             // 确保这个方法是公开的或可供HttpServer调用
     ~TcpServer();
-    
-    // 声明为public，让HttpServer可以访问
-    // 不再需要friend声明
 };
 
 #endif

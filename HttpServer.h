@@ -15,6 +15,7 @@ public:
 private:
     int _fd;
     TcpServer* _server;
+    bool _keepAlive; // 新增：标记连接是否应该保持
     
     // 处理HTTP请求
     void handleHttpRequest(const std::string& requestData);

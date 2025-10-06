@@ -1,5 +1,5 @@
 #include "TcpServer.h"
-#include "HttpServer.h" // 现在可以安全地包含
+#include "HttpServer.h"
 #include "Logger.h"
 #include "epoll.h"
 #include <unistd.h>
@@ -8,6 +8,8 @@
 #include <cstring>
 #include <fcntl.h>
 #include <memory>
+
+#define MAXEPOLLEVENTS 524287
 
 using namespace std;
 
@@ -94,6 +96,7 @@ int TcpServer::getSock()
     return _sfd;
 }
 
+// 修改acceptConnection方法，移除添加定时器的代码
 void TcpServer::acceptConnection()
 {
     sockaddr_in client_addr;
@@ -102,6 +105,7 @@ void TcpServer::acceptConnection()
     while (true)
     {
         int cfd = accept(_sfd, (struct sockaddr*)&client_addr, &client_addr_len);
+        LOG(INFO, "cfd===== "+to_string(cfd));
         if (cfd < 0)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -127,10 +131,18 @@ void TcpServer::acceptConnection()
             _clientLocks[cfd];
         }
         
+        // 移除：不再在连接建立时添加定时器
+        // LOG(INFO,"准备添加定时器");
+        // _timer.addTimer(cfd, 30000, [this, cfd]() {
+        //    LOG(INFO, "连接超时, 关闭连接, fd: " + std::to_string(cfd));
+        //    closeConnection(cfd);
+        // });
+        
         LOG(INFO, "新连接建立成功, fd: " + to_string(cfd));
     }
 }
 
+// 修改handleEvent方法
 void TcpServer::handleEvent(int fd, uint32_t events)
 {
     if (events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
@@ -141,6 +153,9 @@ void TcpServer::handleEvent(int fd, uint32_t events)
     
     if (events & EPOLLIN)
     {
+        // 修改：不再在这里更新定时器，交由HttpServer处理
+        // _timer.updateTimer(fd, 30000);
+        
         auto httpServer = std::make_shared<HttpServer>(fd, this);
         
         _pool.addTask([this, fd, httpServer]() {
@@ -150,8 +165,28 @@ void TcpServer::handleEvent(int fd, uint32_t events)
     }
 }
 
+// 新增：设置定时器的方法
+void TcpServer::setupTimer(int fd, int timeout)
+{
+    _timer.addTimer(fd, timeout, [this, fd]() {
+        LOG(INFO, "Keep-Alive连接超时, 关闭连接, fd: " + std::to_string(fd));
+        closeConnection(fd);
+    });
+    LOG(INFO, "为fd: " + std::to_string(fd) + "设置了" + std::to_string(timeout) + "ms定时器");
+}
+
 void TcpServer::closeConnection(int fd)
 {
+    // 确保不是监听套接字
+    if (fd == _sfd) {
+        LOG(ERROR, "尝试关闭监听套接字，这是不允许的!");
+        return;
+    }
+    
+    LOG(INFO, "尝试移除定时器");
+    _timer.removeTimer(fd);
+    LOG(INFO, "移除定时器成功");
+    
     epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     
@@ -165,17 +200,22 @@ void TcpServer::closeConnection(int fd)
 
 void TcpServer::run()
 {
-    epoll_event events[1024];
-    
+    epoll_event events[MAXEPOLLEVENTS];
+    LOG(INFO, "sfd===== "+to_string(_sfd));
     while (true)
     {
-        int num = epoll_wait(_epfd, events, 1024, -1);
+        // 计算下一个定时器的超时时间
+        int nextTimeout = _timer.getNextTimeout();
+        int timeoutMs = nextTimeout == -1 ? -1 : nextTimeout;
+        
+        int num = epoll_wait(_epfd, events, MAXEPOLLEVENTS, timeoutMs);
         if (num < 0)
         {
             LOG(ERROR, "epoll_wait error");
             continue;
         }
         
+        // 处理IO事件
         for (int i = 0; i < num; i++)
         {
             int fd = events[i].data.fd;
@@ -183,6 +223,7 @@ void TcpServer::run()
             
             if (fd == _sfd)
             {
+                LOG(INFO,"监听到连接");
                 acceptConnection();
             }
             else
@@ -190,5 +231,8 @@ void TcpServer::run()
                 handleEvent(fd, revents);
             }
         }
+        
+        // 检查并处理过期定时器
+        _timer.checkExpired();
     }
 }
