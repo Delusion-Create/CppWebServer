@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <memory>
 
-#define MAXEPOLLEVENTS 524287
+
 
 using namespace std;
 
@@ -104,7 +104,6 @@ void TcpServer::acceptConnection()
     while (true)
     {
         int cfd = accept(_sfd, (struct sockaddr*)&client_addr, &client_addr_len);
-        LOG(INFO, "cfd===== "+to_string(cfd));
         if (cfd < 0)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -130,14 +129,8 @@ void TcpServer::acceptConnection()
             _clientLocks[cfd];
         }
         
-        // 移除：不再在连接建立时添加定时器
-        // LOG(INFO,"准备添加定时器");
-        // _timer.addTimer(cfd, 30000, [this, cfd]() {
-        //    LOG(INFO, "连接超时, 关闭连接, fd: " + std::to_string(cfd));
-        //    closeConnection(cfd);
-        // });
         
-        LOG(INFO, "新连接建立成功, fd: " + to_string(cfd));
+        LOG(INFO, "新连接建立成功, 客户端fd: " + to_string(cfd));
     }
 }
 
@@ -182,9 +175,7 @@ void TcpServer::closeConnection(int fd)
         return;
     }
     
-    LOG(INFO, "尝试移除定时器");
     _timer.removeTimer(fd);
-    LOG(INFO, "移除定时器成功");
     
     epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
@@ -200,7 +191,7 @@ void TcpServer::closeConnection(int fd)
 void TcpServer::run()
 {
     epoll_event events[MAXEPOLLEVENTS];
-    LOG(INFO, "sfd===== "+to_string(_sfd));
+    LOG(DEBUG, "服务器sfd====="+to_string(_sfd));
     while (true)
     {
         // 计算下一个定时器的超时时间

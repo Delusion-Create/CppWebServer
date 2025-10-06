@@ -1,4 +1,3 @@
-// HttpResponse.cpp
 #include "HttpResponse.h"
 #include <sstream>
 

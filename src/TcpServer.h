@@ -10,6 +10,9 @@
 #include <mutex>
 #include <memory>
 
+//epoll模型最大监听事件数
+#define MAXEPOLLEVENTS 524287
+
 // 前置声明
 class HttpServer;
 
@@ -43,8 +46,8 @@ public:
     void acceptConnection();
     void handleEvent(int fd, uint32_t events);
     void closeConnection(int fd);
-    void setupTimer(int fd, int timeout); // 新增：为连接设置定时器
-    void removeTimer(int fd);             // 确保这个方法是公开的或可供HttpServer调用
+    void setupTimer(int fd, int timeout);
+    void removeTimer(int fd);            
     ~TcpServer();
 };
 

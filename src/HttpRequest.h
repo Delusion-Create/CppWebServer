@@ -1,4 +1,3 @@
-// HttpRequest.h
 #ifndef _HTTPREQUEST_H_
 #define _HTTPREQUEST_H_
 

@@ -1,4 +1,3 @@
-// HttpRequest.cpp
 #include "HttpRequest.h"
 #include <sstream>
 #include <iostream>

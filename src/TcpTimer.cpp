@@ -4,11 +4,11 @@
 #include <algorithm>
 
 TcpTimer::TcpTimer() {
-    LOG(INFO, "TcpTimer对象创建");
+    //LOG(DEBUG, "TcpTimer对象创建");
 }
 
 TcpTimer::~TcpTimer() {
-    LOG(INFO, "TcpTimer对象销毁开始");
+    //LOG(INFO, "TcpTimer对象销毁开始");
     std::lock_guard<std::mutex> lock(_mutex);
     
     // 标记所有定时器为已删除
@@ -18,7 +18,7 @@ TcpTimer::~TcpTimer() {
     
     _timerMap.clear();
     _timerSet.clear();
-    LOG(INFO, "TcpTimer对象销毁完成");
+    //LOG(INFO, "TcpTimer对象销毁完成");
 }
 
 void TcpTimer::addTimer(int fd, int timeout, TimerCallback cb) {

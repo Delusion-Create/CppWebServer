@@ -5,11 +5,11 @@
 TimerNode::TimerNode(int fd, int timeout, TimerCallback cb)
     : _fd(fd), _callback(cb), _deleted(false) {
     update(timeout);
-    LOG(DEBUG, "TimerNode创建, fd: " + std::to_string(fd));
+    //LOG(DEBUG, "TimerNode创建, fd: " + std::to_string(fd));
 }
 
 TimerNode::~TimerNode() {
-    LOG(DEBUG, "TimerNode销毁, fd: " + std::to_string(_fd));
+    //LOG(DEBUG, "TimerNode销毁, fd: " + std::to_string(_fd));
 }
 
 std::chrono::steady_clock::time_point TimerNode::getExpireTime() const {
@@ -26,7 +26,7 @@ bool TimerNode::isExpired() const {
 
 void TimerNode::triggerCallback() {
     if (_callback && !_deleted) {
-        LOG(INFO, "触发定时器回调, fd: " + std::to_string(_fd));
+        //LOG(DEBUG, "触发定时器回调, fd: " + std::to_string(_fd));
         _callback();
     }
 }
@@ -48,7 +48,7 @@ bool TimerNode::operator<(const TimerNode& other) const {
 
 void TimerNode::markDeleted() {
     _deleted = true;
-    LOG(DEBUG, "标记定时器为已删除, fd: " + std::to_string(_fd));
+    //LOG(DEBUG, "标记定时器为已删除, fd: " + std::to_string(_fd));
 }
 
 bool TimerNode::isDeleted() const {
