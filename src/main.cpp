@@ -25,7 +25,7 @@ int main(int argc,const char* argv[])
     }
     else if(argc==3)
     {
-        TcpServer* tp=TcpServer::GetInstance("192.168.247.128",8848);
+        TcpServer* tp=TcpServer::GetInstance(argv[1],atoi(argv[2]));
         tp->run();
     }
     else

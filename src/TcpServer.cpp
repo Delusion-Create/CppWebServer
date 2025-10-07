@@ -18,7 +18,7 @@ TcpServer* TcpServer::GetInstance(std::string ip, int port)
     return &instance;
 }
 
-TcpServer::TcpServer(std::string ip, int port) : _ip(ip), _port(port), _pool(5)
+TcpServer::TcpServer(std::string ip, int port) : _ip(ip), _port(port), _pool(4)
 {
     initialServer();
 }
